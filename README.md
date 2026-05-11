@@ -50,12 +50,19 @@ This repository contains the official PyTorch implementation for the ICML 2026 p
 
     For more details on other arguments, please refer to [utils.py](utils.py).
 
-Alternatively, you can directly download checkpoints provided by [AdaLog](https://github.com/GoatWu/AdaLog). For example:
-
-```bash
-wget https://github.com/GoatWu/AdaLog/releases/download/v1.0/deit_tiny_patch16_224.bin
-mkdir -p ./checkpoint/vit_raw/
-mv deit_tiny_patch16_224.bin ./checkpoint/vit_raw/
-```
 
 ## Usage
+
+The code for STLA was modified based on [aespa](https://github.com/SamsungLabs/aespa).
+
+## Citation
+If you find this work is useful for your research, please cite our paper:
+```bash
+@inproceedings{zhang2026stla,
+title={{STLA}: Spatiotemporal Lookahead Alignment for Post-Training Quantization},
+author={Zhang, Zuqi and Sun, Chenghe and Chu, Xiangyi and Yu, Wei-Han and Un, Ka-Fai and Martins, Rui P. and Mak, Pui-In and Xu, Jiawei},
+booktitle={Forty-third International Conference on Machine Learning},
+year={2026},
+url={https://openreview.net/forum?id=d3RFDLBw01}
+}
+```
