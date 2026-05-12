@@ -1,62 +1,93 @@
 # STLA: Spatiotemporal Lookahead Alignment for Post-Training Quantization
 
 This repository contains the official PyTorch implementation for the ICML 2026 paper *"STLA: Spatiotemporal Lookahead Alignment for Post-Training Quantization"*.
+
 ![overview](overview.png)
-<!-- abstract ... -->
 
 ## Get Started
 
-1. **Clone this repository**:
+Clone this repository:
 
-   ```bash
-   git clone https://anonymous.4open.science/r/STLA
-   ```
+```bash
+git clone https://anonymous.4open.science/r/STLA
+```
 
-   Then navigate to the desired directory:
+Then navigate to the project directory:
 
-   ```bash
-   cd STLA
-   ```
+```bash
+cd STLA
+```
 
-2. **Install**:
+Install the required dependencies:
 
-   1.Ensure you have PyTorch installed. You can install PyTorch 1.10.0 with the following command:
-
-   ```bash
-   pip install torch==1.10.0 torchvision --index-url https://download.pytorch.org/whl/cu113
-   ```
-
-   2.Pretrained models for STLA can be obtained using the transformers library (version 4.43.2). Ensure transformers is installed:
-
-   ```bash
-   pip install transformers==4.43.2
-   ```
-
-   For dataset loading and preprocessing, this project uses the datasets library, tested on version 2.20.0. Install it with:
-
-   ```bash
-   pip install datasets==2.20.0
-   ```
-
-2. **Options**:
-
-    - `groupsize`: Group size for quantization.`-1`: Per-channel quantization. `>0`: Specifies the group size for finer-grained quantization.
-    - `blocksize`: Block Size. `-1`: Invalid lazy latch-updates. `>0`:The block size used for lazy latch-updates during the GPTQ/GPTAQ process.
-    - `clustersize`: Cluster Size. Number of columns processed per cluster. `-1`: Disables joint optimization. `>0`: The number of columns where weight interactions are explicitly modeled.
-    - `loss_option`: Loss Scope.`'global'`: Uses global loss for hyperparameter search and Adaround.`'local'`: Uses local loss.
-    - `order_option`: Hessian-based Re-ordering.`'spin'`: Applies spincluster re-ordering.`'act'`: Re-orders based on activation magnitude.<br>• `'none'`: Disables re-ordering.
-    - `comp_method`:Compensation Method.`'GPTQ'`: Uses standard GPTQ error compensation.`'GPTAQ'`: Uses standard GPTAQ error compensation method. 
-    - `learn_rounding`: Adaround. Learns the optimal rounding policy via gradient descent instead of using nearest-neighbor rounding. 
-
-    For more details on other arguments, please refer to [utils.py](utils.py).
-
+```bash
+pip install torch==1.10.0 torchvision --index-url https://download.pytorch.org/whl/cu113
+pip install transformers==4.43.2
+pip install datasets==2.20.0
+```
 
 ## Usage
 
-The code for STLA was modified based on [aespa](https://github.com/SamsungLabs/aespa).
+The code in this repository was modified based on [aespa](https://github.com/SamsungLabs/aespa).
+
+To quantize and evaluate an LLM, use the following command:
+
+```bash
+python main.py --model_path facebook/opt-125m --calib_data c4 --nsamples 128 --seqlen 2048 --seed 0 --w_bits 3 --groupsize 256 --clustersize 256 --loss_option global --order_option spin --comp_method GPTAQ --learn_rounding --num_iters 200 --lr 0.015 --round_weight 1.0
+```
+
+### Command-Line Arguments
+
+- `--model_path`: Path to the LLM model. Examples: `facebook/opt-125m`, `facebook/opt-1.3b`, `facebook/opt-6.7b`, `meta-llama/Llama-2-7b`, `meta-llama/Llama-3.1-8B`.
+- `--save_model`: Save the fake-quantized model.
+- `--cache_dir`: Cache directory for calibration data.
+- `--calib_data`: Calibration dataset. Choices: `c4`, `wikitext2`.
+- `--nsamples`: Number of calibration samples.
+- `--seqlen`: Maximum sequence length.
+- `--seed`: Random seed.
+- `--w_bits`: Weight bit-width.
+- `--w_sym`: Enable symmetric weight quantization.
+- `--groupsize`: Group size for groupwise quantization. `-1` means per-channel quantization.
+- `--block_v`: Enable block-wise objective for the value projection.
+- `--loss_option`: Loss scope. Choices: `local`, `global`.
+- `--use_zfold`: Apply Z-Fold.
+- `--order_option`: Hessian-based re-ordering. Choices: `spin`, `act`, `none`.
+- `--comp_method`: Compensation method. Choices: `GPTAQ`, `GPTQ`.
+- `--learn_rounding`: Learn the rounding policy via gradient descent.
+- `--blocksize`: OPTQ block size.
+- `--clustersize`: Number of columns per cluster.
+- `--lr`: Learning rate for Adaround training.
+- `--round_weight`: Weight of rounding loss in Adaround.
+- `--round_weight_qkv`: Rounding loss weight for QKV.
+- `--num_iters`: Number of Adaround iterations.
+- `--replace`: Value used for Hessian diagonal replacement.
+- `--percdamp`: Percent of the average Hessian diagonal used for dampening.
+
+For more details on the implementation-specific options, please refer to [utils.py](utils.py).
+
+## Outputs
+
+Quantization results are written to the `results/` directory. If `--save_model` is enabled, the quantized model is saved under `qmodels/`. A summary CSV named `quantization_results.csv` is also appended in the project root.
+
+### Ablation Results
+
+The table below reports the contribution of the lookahead global objective, coupled spatiotemporal alignment optimization, and the SpinCluster strategy on perplexity and GPU runtime.
+
+| Gran. | Group Size | Coupled | Cluster | Loss | OPT-125M C4 | OPT-125M Wkt-2 | OPT-125M Time | Llama2-7B C4 | Llama2-7B Wkt-2 | Llama2-7B Time |
+| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Channel | - | × | × | Global | 31.21 | 34.52 | 109.3 s | 8.42 | 6.51 | 2.3 hr |
+| Channel | - | ✓ | × | Local | 32.63 | 35.82 | 74.7 s | 8.47 | 6.49 | 36.4 min |
+| Channel | - | ✓ | × | Global | 30.69 | 33.45 | 76.5 s | 8.30 | 6.36 | 38.6 min |
+| Group | 256 | × | × | Global | 30.33 | 33.59 | 116.4 s | 8.09 | 6.19 | 2.3 hr |
+| Group | 256 | ✓ | × | Local | 31.30 | 35.86 | 75.2 s | 8.14 | 6.11 | 32.8 min |
+| Group | 256 | ✓ | × | Global | 29.86 | 32.00 | 76.8 s | 8.02 | 6.44 | 32.8 min |
+| Group | 256 | ✓ | Spin | Local | 30.51 | 33.39 | 89.4 s | 8.10 | 6.17 | 39.7 min |
+| Group | 256 | ✓ | Spin | Global | 29.26 | 31.01 | 89.8 s | 7.99 | 6.09 | 40.6 min |
 
 ## Citation
-If you find this work is useful for your research, please cite our paper:
+
+If you find this work useful for your research, please cite our paper:
+
 ```bash
 @inproceedings{zhang2026stla,
 title={{STLA}: Spatiotemporal Lookahead Alignment for Post-Training Quantization},
