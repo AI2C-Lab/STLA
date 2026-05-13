@@ -33,7 +33,7 @@ The code in this repository was modified based on [aespa](https://github.com/Sam
 To quantize and evaluate an LLM, use the following command:
 
 ```bash
-python main.py --model_path facebook/opt-125m --calib_data c4 --nsamples 128 --seqlen 2048 --seed 0 --w_bits 3 --groupsize 256 --clustersize 256 --loss_option global --order_option spin --comp_method GPTAQ --learn_rounding --num_iters 200 --lr 0.015 --round_weight 1.0
+python main.py --model_path facebook/opt-125m --calib_data c4 --nsamples 128 --seqlen 2048 --seed 0 --w_bits 3 --blocksize 256 --groupsize 256 --clustersize 256 --loss_option global --order_option spin --comp_method GPTAQ --learn_rounding --num_iters 200 --lr 1.1 --round_weight 1.0 --block_v
 ```
 
 ### Command-Line Arguments
@@ -48,9 +48,8 @@ python main.py --model_path facebook/opt-125m --calib_data c4 --nsamples 128 --s
 - `--w_bits`: Weight bit-width.
 - `--w_sym`: Enable symmetric weight quantization.
 - `--groupsize`: Group size for groupwise quantization. `-1` means per-channel quantization.
-- `--block_v`: Enable block-wise objective for the value projection.
+- `--block_v`: Apply block-wise objective for the value projection in attention layers to optimize reconstruction loss at the block level.
 - `--loss_option`: Loss scope. Choices: `local`, `global`.
-- `--use_zfold`: Apply Z-Fold.
 - `--order_option`: Hessian-based re-ordering. Choices: `spin`, `act`, `none`.
 - `--comp_method`: Compensation method. Choices: `GPTAQ`, `GPTQ`.
 - `--learn_rounding`: Learn the rounding policy via gradient descent.
